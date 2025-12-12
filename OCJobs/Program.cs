@@ -1,4 +1,4 @@
-﻿using ConsoleApp1;
+﻿using OCJobs;
 using Lumina;
 using Lumina.Data.Files;
 using Lumina.Excel.Sheets.Experimental;
