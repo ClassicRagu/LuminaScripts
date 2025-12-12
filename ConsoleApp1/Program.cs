@@ -1,9 +1,17 @@
 ﻿using ConsoleApp1;
+using Lumina;
+using Lumina.Data.Files;
 using Lumina.Excel.Sheets.Experimental;
 using Newtonsoft.Json;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 class Program
 {
+
+    private const string IconFileFormat = "ui/icon/{0:D3}000/{1}{2:D6}.tex";
+    private const string IconHDFileFormat = "ui/icon/{0:D3}000/{1}{2:D6}_hr1.tex";
+
     static void Main(string[] args)
     {
         if (args.Length < 1)
@@ -14,13 +22,25 @@ class Program
 
         string xivPath = args[0];
 
-        var lumina = new Lumina.GameData(xivPath, new() { DefaultExcelLanguage = Lumina.Data.Language.English });
-        #pragma warning disable PendingExcelSchema // Non-experimental doesn't have defined offsets
+        var lumina = new GameData(xivPath, new() { DefaultExcelLanguage = Lumina.Data.Language.English });
+#pragma warning disable PendingExcelSchema // Non-experimental doesn't have defined offsets
         var mkdSupportJobs = lumina.GetExcelSheet<MKDSupportJob>();
         var mkdTraits = lumina.GetExcelSheet<MKDTrait>();
         var mkdGrowDataSJob = lumina.GetSubrowExcelSheet<MKDGrowDataSJob>();
         var actionTransient = lumina.GetExcelSheet<ActionTransient>();
         List<CompiledJobInfo> compiledJobInfos = new List<CompiledJobInfo>();
+
+        string actionDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), $"actions/");
+        if (!Directory.Exists(actionDirectoryPath))
+        {
+            Directory.CreateDirectory(actionDirectoryPath);
+        }
+
+        string traitDirectoryPath = Path.Combine(Directory.GetCurrentDirectory(), $"traits/");
+        if (!Directory.Exists(traitDirectoryPath))
+        {
+            Directory.CreateDirectory(traitDirectoryPath);
+        }
 
         foreach (MKDSupportJob mkdSupportJob in mkdSupportJobs)
         {
@@ -53,6 +73,21 @@ class Program
                     levelUnlock.ActionTraitIconID = action.Action.Value.Icon;
                     levelUnlock.ActionRange = action.Action.Value.Range;
                     levelUnlocks[mkdSupportJob.RowId != 0 ? action.LevelUnlock - 1 : action.LevelUnlock / 5 - 1].Add(levelUnlock);
+
+                    try
+                    {
+                        var icon = GetIcon(lumina, "en/", action.Action.Value.Icon, true);
+                        if (icon != null)
+                        {
+                            var image = Image.LoadPixelData<Bgra32>(icon.ImageData, icon.Header.Width, icon.Header.Height);
+                            var iconFilePath = Path.Combine(actionDirectoryPath, $"{action.Action.Value.Name.ExtractText()}.png");
+                            image.Save(iconFilePath);
+                        }
+                    }
+                    catch
+                    {
+                        // :3 lets make sure the json file gets created at least just incase they change icon formats
+                    }
                 }
             }
             compiledJobInfo.LevelUnlocks = levelUnlocks;
@@ -70,6 +105,21 @@ class Program
                 levelUnlock.ActionTraitEffect = mkdTrait.Unknown1.ExtractText();
                 levelUnlock.ActionTraitIconID = (uint)mkdTrait.Unknown2;
                 compiledJobInfos[mkdTrait.Unknown3].LevelUnlocks[mkdTrait.Unknown4 - 1].Add(levelUnlock);
+
+                try
+                {
+                    var icon = GetIcon(lumina, "en/", mkdTrait.Unknown2, true);
+                    if (icon != null)
+                    {
+                        var image = Image.LoadPixelData<Bgra32>(icon.ImageData, icon.Header.Width, icon.Header.Height);
+                        var iconFilePath = Path.Combine(traitDirectoryPath, $"{mkdTrait.Unknown0.ExtractText()}.png");
+                        image.Save(iconFilePath);
+                    }
+                }
+                catch
+                {
+                    // :3 lets make sure the json file gets created at least just incase they change icon formats
+                }
             }
         }
         // Console.WriteLine(JsonConvert.SerializeObject(compiledJobInfos, Formatting.Indented));
@@ -80,5 +130,29 @@ class Program
             Directory.CreateDirectory(directoryPath);
         }
         File.WriteAllText(Path.Combine(directoryPath, "PhantomJobs.json"), JsonConvert.SerializeObject(compiledJobInfos, Formatting.Indented));
+    }
+
+    private static TexFile? GetIcon(GameData gameData, string type, int iconId, bool hd)
+    {
+        type ??= string.Empty;
+        if (type.Length > 0 && !type.EndsWith("/"))
+            type += "/";
+
+        var filePath = string.Format(hd ? IconHDFileFormat : IconFileFormat, iconId / 1000, type, iconId);
+        try
+        {
+            var file = gameData.GetFile<TexFile>(filePath);
+
+            if (file != default(TexFile) || type.Length <= 0) return file;
+
+            // Couldn't get specific type, try for generic version.
+            filePath = string.Format(hd ? IconHDFileFormat : IconFileFormat, iconId / 1000, string.Empty, iconId);
+            file = gameData.GetFile<TexFile>(filePath);
+            return file;
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
     }
 }

@@ -5,6 +5,8 @@
 
 # Output
 json/
+actions/
+traits/
 
 # User-specific files
 *.suo
