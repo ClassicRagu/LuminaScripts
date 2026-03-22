@@ -1,7 +1,7 @@
 using System.Reflection.Metadata.Ecma335;
 using Lumina;
 using Lumina.Data.Files;
-using Lumina.Excel.Sheets.Experimental;
+using Lumina.Excel.Sheets;
 using Newtonsoft.Json;
 using OCSpecialShop;
 using SixLabors.ImageSharp;
@@ -30,7 +30,6 @@ class Program
         string xivPath = args[0];
 
         var lumina = new GameData(xivPath, new() { DefaultExcelLanguage = Lumina.Data.Language.English });
-#pragma warning disable PendingExcelSchema // Non-experimental doesn't have defined offsets
         var specialShops = lumina.GetExcelSheet<SpecialShop>();
         var enlightenedCoins = specialShops?.Where(x => x.Name.ExtractText().ToLowerInvariant().Contains("enlightenment"));
         var sanguini = specialShops?.Where(x => x.Name.ExtractText().ToLowerInvariant().Contains("sanguinite"));

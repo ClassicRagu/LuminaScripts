@@ -1,7 +1,7 @@
 ﻿using OCJobs;
 using Lumina;
 using Lumina.Data.Files;
-using Lumina.Excel.Sheets.Experimental;
+using Lumina.Excel.Sheets;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -23,7 +23,6 @@ class Program
         string xivPath = args[0];
 
         var lumina = new GameData(xivPath, new() { DefaultExcelLanguage = Lumina.Data.Language.English });
-#pragma warning disable PendingExcelSchema // Non-experimental doesn't have defined offsets
         var mkdSupportJobs = lumina.GetExcelSheet<MKDSupportJob>();
         var mkdTraits = lumina.GetExcelSheet<MKDTrait>();
         var mkdGrowDataSJob = lumina.GetSubrowExcelSheet<MKDGrowDataSJob>();
@@ -95,24 +94,24 @@ class Program
         }
         foreach (MKDTrait mkdTrait in mkdTraits)
         {
-            if (mkdTrait.Unknown4 > 0)
+            if (mkdTrait.LevelUnlock > 0)
             {
                 LevelUnlock levelUnlock = new LevelUnlock();
-                levelUnlock.Level = mkdTrait.Unknown4;
+                levelUnlock.Level = mkdTrait.LevelUnlock;
                 levelUnlock.UnlockType = "Trait";
                 levelUnlock.ActionTraitRowID = mkdTrait.RowId;
-                levelUnlock.ActionTraitName = mkdTrait.Unknown0.ExtractText();
-                levelUnlock.ActionTraitEffect = mkdTrait.Unknown1.ExtractText();
-                levelUnlock.ActionTraitIconID = (uint)mkdTrait.Unknown2;
-                compiledJobInfos[mkdTrait.Unknown3].LevelUnlocks[mkdTrait.Unknown4 - 1].Add(levelUnlock);
+                levelUnlock.ActionTraitName = mkdTrait.Name.ExtractText();
+                levelUnlock.ActionTraitEffect = mkdTrait.Description.ExtractText();
+                levelUnlock.ActionTraitIconID = (uint)mkdTrait.Icon;
+                compiledJobInfos[(int)mkdTrait.MKDSupportJob.RowId].LevelUnlocks[mkdTrait.LevelUnlock - 1].Add(levelUnlock);
 
                 try
                 {
-                    var icon = GetIcon(lumina, "en/", mkdTrait.Unknown2, true);
+                    var icon = GetIcon(lumina, "en/", mkdTrait.Icon, true);
                     if (icon != null)
                     {
                         var image = Image.LoadPixelData<Bgra32>(icon.ImageData, icon.Header.Width, icon.Header.Height);
-                        var iconFilePath = Path.Combine(traitDirectoryPath, $"{mkdTrait.Unknown0.ExtractText()}.png");
+                        var iconFilePath = Path.Combine(traitDirectoryPath, $"{mkdTrait.Name.ExtractText()}.png");
                         image.Save(iconFilePath);
                     }
                 }
