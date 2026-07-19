@@ -34,10 +34,12 @@ class Program
         var enlightenedCoins = specialShops?.Where(x => x.Name.ExtractText().ToLowerInvariant().Contains("enlightenment"));
         var sanguini = specialShops?.Where(x => x.Name.ExtractText().ToLowerInvariant().Contains("sanguinite"));
         var arcanautAugmentation = specialShops?.Where(x => x.Name.ExtractText().ToLowerInvariant().Contains("arcanaut"));
+        var magicite = specialShops?.Where(x => x.Name.ExtractText().ToLowerInvariant().Contains("magicite"));
 
         ProcessSpecialShop(directoryPath, enlightenedCoins);
         ProcessSpecialShop(directoryPath, sanguini);
         ProcessSpecialShop(directoryPath, arcanautAugmentation);
+        ProcessSpecialShop(directoryPath, magicite);
     }
 
     static void ProcessSpecialShop (string directoryPath, IEnumerable<SpecialShop> specialShops)
@@ -45,7 +47,7 @@ class Program
         foreach (var shop in specialShops)
         {
             ShopObject shopObject = new ShopObject();
-            shopObject.Name = shop.Name.ExtractText();
+            shopObject.Name = shop.Name.ExtractText().Replace("/", " ").Replace("\\", " ");
             List<ShopItem> shopItems = new List<ShopItem>();
             foreach (var item in shop.Item)
             {
@@ -72,7 +74,7 @@ class Program
             
             shopObject.ShopItems = shopItems;
             
-            File.WriteAllText(Path.Combine(directoryPath, $"{shopObject.Name}.json"), JsonConvert.SerializeObject(shopItems, Formatting.Indented));
+            File.WriteAllText(Path.Combine(directoryPath, $"{shop.RowId} - {shopObject.Name}.json"), JsonConvert.SerializeObject(shopItems, Formatting.Indented));
         }
     }
 }
