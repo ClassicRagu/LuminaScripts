@@ -32,10 +32,10 @@ class Program
         var lumina = new GameData(xivPath, new() { DefaultExcelLanguage = Lumina.Data.Language.English });
         var specialShops = lumina.GetExcelSheet<SpecialShop>();
 
-        ProcessSpecialShop(directoryPath, specialShops);
+        ProcessSpecialShop(directoryPath, lumina, specialShops);
     }
 
-    static void ProcessSpecialShop (string directoryPath, IEnumerable<SpecialShop> specialShops)
+    static void ProcessSpecialShop (string directoryPath, GameData lumina, IEnumerable<SpecialShop> specialShops)
     {
         foreach (var shop in specialShops)
         {
@@ -57,7 +57,9 @@ class Program
                     shopItem.ShopCosts = item.ItemCosts.Where(x => { return x.ItemCost.RowId > 0; }).Select(x => new ShopCost
                     {
                         ItemID = x.ItemCost.RowId,
-                        ItemCostName = x.ItemCost.Value.Name.ExtractText(),
+                        // Leaving this in incase something breaks with item name processing
+                        // ItemCostName = x.ItemCost.Value.Name.ExtractText(),
+                        ItemCostName = ProcessItemName(lumina, x.CostType, x.ItemCost.RowId),
                         ItemCostValue = x.CurrencyCost
                     }).ToList();
 
@@ -69,6 +71,44 @@ class Program
             
             if(shopObject.ShopItems.Count > 0)
             File.WriteAllText(Path.Combine(directoryPath, $"{shop.RowId} - {shopObject.Name}.json"), JsonConvert.SerializeObject(shopItems, Formatting.Indented));
+        }
+    }
+
+    static string ProcessItemName (GameData lumina, uint costType, uint rowId)
+    {
+        switch (costType)
+        {
+            case 2:
+                return lumina.GetExcelSheet<TomestonesItem>().First(x => x.Tomestones.RowId == rowId).Item.Value.Name.ExtractText();
+            case 3:
+                // Scrips and similar items have a special id, not clear where this is mapped in the sheets
+                switch (rowId){
+                    // White Crafters' Scrip
+                    case 1:
+                        return lumina.GetExcelSheet<Item>().GetRow(25199).Name.ExtractText();
+                    // Purple Crafters' Scrip
+                    case 2:
+                        return lumina.GetExcelSheet<Item>().GetRow(33913).Name.ExtractText();
+                    // White Gatherers' Scrip
+                    case 3:
+                        return lumina.GetExcelSheet<Item>().GetRow(25200).Name.ExtractText();
+                    // Purple Gatherers' Scrip
+                    case 4:
+                        return lumina.GetExcelSheet<Item>().GetRow(33914).Name.ExtractText();
+                    // Centurio Seal?
+                    case 5:
+                        return lumina.GetExcelSheet<Item>().GetRow(10307).Name.ExtractText();
+                    // Orange Crafters' Scrip
+                    case 6:
+                        return lumina.GetExcelSheet<Item>().GetRow(41784).Name.ExtractText();
+                    // Orange Gatherers' Scrip
+                    case 7:
+                        return lumina.GetExcelSheet<Item>().GetRow(41785).Name.ExtractText();
+                    default:
+                        return lumina.GetExcelSheet<Item>().GetRow(rowId).Name.ExtractText();
+                }
+            default:
+                return lumina.GetExcelSheet<Item>().GetRow(rowId).Name.ExtractText();
         }
     }
 }
