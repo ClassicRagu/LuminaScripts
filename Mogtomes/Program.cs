@@ -76,13 +76,15 @@ class Program
             MogtomeContent? content1 = null;
             if (objectiveType == "minimog") Console.WriteLine($"Week {i}:");
             content0 = ProcessContent(lumina, csBonusMission.Content0.Value);
-            if (objectiveType == "minimog") {
+            if (objectiveType == "minimog")
+            {
                 content1 = ProcessContent(lumina, csBonusMission.Content1.Value);
                 content0.Week = i;
                 content1.Week = i;
-            };
+            }
+            
             mogtomeContents.Add(content0);
-            if(content1 != null) mogtomeContents.Add(content1);
+            if (content1 != null) mogtomeContents.Add(content1);
             i++;
         }
         return mogtomeContents;
@@ -438,6 +440,12 @@ class Program
                 }
                 break;
             default:
+                Console.WriteLine($"Unknown! ContentType: {csBonusContent.ContentType.RowId}");
+                mogtomeContent = new MogtomeContent()
+                {
+                    ContentType = csBonusContent.ContentType.RowId,
+                    ComputedString = $"Unknown! ContentType: {csBonusContent.ContentType.RowId}"
+                };
                 break;
         }
 
