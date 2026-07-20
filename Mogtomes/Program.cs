@@ -14,7 +14,7 @@ class Program
     {
         if (args.Length < 1)
         {
-            Console.WriteLine("Please include a file path");
+            Console.WriteLine("Please include a file path to your sqpack folder");
             return;
         }
 
@@ -28,26 +28,64 @@ class Program
 
         var lumina = new GameData(xivPath, new() { DefaultExcelLanguage = Lumina.Data.Language.English });
 
-        var csBonusSeason = lumina.GetExcelSheet<CSBonusSeason>();
+        var csBonusSeasons = lumina.GetExcelSheet<CSBonusSeason>().Where(x => x.Text0.RowId > 0);
 
-        var Astronomy1 = csBonusSeason.GetRow(28);
-        ProcessMogtomeSeason(lumina, Astronomy1);
+        foreach (CSBonusSeason cSBonusSeason in csBonusSeasons)
+        {
+            MogtomeObject output = ProcessMogtomeSeason(lumina, cSBonusSeason);
+            File.WriteAllText(Path.Combine(directoryPath, $"{output.Currency}.json"), JsonConvert.SerializeObject(output, Formatting.Indented, new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore
+            }));
+        }
+
     }
 
-    static void ProcessMogtomeSeason(GameData lumina, CSBonusSeason csBonusSeason)
+    static MogtomeObject ProcessMogtomeSeason(GameData lumina, CSBonusSeason csBonusSeason)
     {
+        Console.WriteLine(csBonusSeason.Text1.Value.Text);
         var csBonusmissions = lumina.GetSubrowExcelSheet<CSBonusMission>();
-        //ProcessStandard(lumina, csBonusmissions.GetRow(csBonusSeason.Category0));
-        ProcessMissions(lumina, csBonusmissions.GetRow(30), true);
+        MogtomeObject mogtomeObject = new MogtomeObject()
+        {
+            Name = csBonusSeason.Text1.Value.Text.ExtractText(),
+            Currency = csBonusSeason.Item.Value.Name.ExtractText()
+        };
+
+        Console.WriteLine("Standard/Weekly Objectives");
+        mogtomeObject.StandardObjectives = ProcessMissions(lumina, csBonusmissions.GetRow(csBonusSeason.Category0));
+
+        Console.WriteLine();
+        Console.WriteLine("Minimog Objectives");
+        mogtomeObject.MinimogObjectives = ProcessMissions(lumina, csBonusmissions.GetRow(csBonusSeason.Category2), "minimog");
+
+        Console.WriteLine();
+        Console.WriteLine("Ultimog Objectives");
+        mogtomeObject.UltimogObjectives = ProcessMissions(lumina, csBonusmissions.GetRow(csBonusSeason.Category3), "ultimog").First();
+
+        Console.WriteLine();
+        return mogtomeObject;
     }
 
-    static void ProcessMissions(GameData lumina, SubrowCollection<CSBonusMission> csBonusMissions, bool minimog = false)
+    static List<MogtomeContent> ProcessMissions(GameData lumina, SubrowCollection<CSBonusMission> csBonusMissions, string objectiveType = "standard")
     {
+        List<MogtomeContent> mogtomeContents = new List<MogtomeContent>();
+        var i = 1;
         foreach (CSBonusMission csBonusMission in csBonusMissions)
         {
-            ProcessContent(lumina, csBonusMission.Content0.Value);
-            if (minimog) ProcessContent(lumina, csBonusMission.Content1.Value);
+            MogtomeContent? content0 = null;
+            MogtomeContent? content1 = null;
+            if (objectiveType == "minimog") Console.WriteLine($"Week {i}:");
+            content0 = ProcessContent(lumina, csBonusMission.Content0.Value);
+            if (objectiveType == "minimog") {
+                content1 = ProcessContent(lumina, csBonusMission.Content1.Value);
+                content0.Week = i;
+                content1.Week = i;
+            };
+            mogtomeContents.Add(content0);
+            if(content1 != null) mogtomeContents.Add(content1);
+            i++;
         }
+        return mogtomeContents;
     }
 
     static MogtomeContent ProcessContent(GameData lumina, CSBonusContent csBonusContent)
