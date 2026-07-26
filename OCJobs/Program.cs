@@ -67,7 +67,7 @@ class Program
                     levelUnlock.UnlockType = "Action";
                     levelUnlock.ActionTraitRowID = action.Action.RowId;
                     levelUnlock.ActionTraitName = action.Action.Value.Name.ExtractText();
-                    levelUnlock.ActionTraitEffect = actionTransient.GetRow(action.Action.RowId).Description.ExtractText();
+                    levelUnlock.ActionTraitEffect = actionTransient.GetRow(action.Action.RowId).Description.ToMacroString();
                     levelUnlock.ActionType = action.Action.Value.ActionCategory.Value.Name.ExtractText();
                     levelUnlock.ActionTraitIconID = action.Action.Value.Icon;
                     levelUnlock.ActionRange = action.Action.Value.Range;
