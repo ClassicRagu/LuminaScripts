@@ -5,6 +5,8 @@ using Lumina.Excel.Sheets;
 using Newtonsoft.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Text;
+using System.Text.RegularExpressions;
 
 class Program
 {
@@ -129,6 +131,8 @@ class Program
             Directory.CreateDirectory(directoryPath);
         }
         File.WriteAllText(Path.Combine(directoryPath, "PhantomJobs.json"), JsonConvert.SerializeObject(compiledJobInfos, Formatting.Indented));
+
+        GenerateMarkdown(compiledJobInfos, directoryPath);
     }
 
     private static TexFile? GetIcon(GameData gameData, string type, int iconId, bool hd)
@@ -152,6 +156,47 @@ class Program
         catch (FileNotFoundException)
         {
             return null;
+        }
+    }
+
+    // Lazy last minute markdown addition, clean up later
+    private static void GenerateMarkdown(List<CompiledJobInfo> compiledJobInfos, string directoryPath)
+    {
+
+        foreach (var job in compiledJobInfos)
+        {
+            var markdownJob = new StringBuilder();
+            markdownJob.AppendLine($"# {job.PJob}");
+            markdownJob.AppendLine();
+            markdownJob.AppendLine($"- **Description**: {job.PJobDescription}");
+            markdownJob.AppendLine($"- **Max Level:** {job.MaxLevel}");
+            if (job.EXPValues != null) markdownJob.AppendLine($"- **EXP Values:** {string.Join(", ", job.EXPValues)}");
+            markdownJob.AppendLine($"- **Total EXP:** {job.TotalEXP}");
+            markdownJob.AppendLine("## Level Unlocks");
+            markdownJob.AppendLine();
+            if (job.LevelUnlocks != null)
+            {
+                for (int i = 0; i < job.LevelUnlocks.Length; i++)
+                {
+                    var unlocks = job.LevelUnlocks[i];
+                    if (unlocks == null || unlocks.Count == 0) continue;
+                    markdownJob.AppendLine($"**Level {i + 1}**");
+                    foreach (var ul in unlocks)
+                    {
+                        markdownJob.AppendLine($"- **Name:** {ul.ActionTraitName}");
+                        markdownJob.AppendLine($"  - **Type:** {ul.UnlockType}");
+                        markdownJob.AppendLine($"  - **Icon ID:** {ul.ActionTraitIconID}");
+                        if (ul.ActionTraitEffect != null)
+                        {
+                            var cleanedEffect = ul.ActionTraitEffect;
+                            cleanedEffect = cleanedEffect.Replace("<br>", "\n    ");
+                            cleanedEffect = Regex.Replace(cleanedEffect, @"<(?:colortype|edgecolortype)\(\d+\)>", "");
+                            markdownJob.AppendLine($"  - **Effect:** {cleanedEffect}");
+                        }
+                    }
+                }
+            }
+            File.WriteAllText(Path.Combine(directoryPath, $"{job.PJob}.md"), markdownJob.ToString());
         }
     }
 }
